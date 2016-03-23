@@ -22,28 +22,27 @@ local function plugin_exists( name )
 end
 
 local function list_all_plugins(only_enabled)
-  local tmp = '\n\n@telemanager_ch'
   local text = ''
   local nsum = 0
   for k, v in pairs( plugins_names( )) do
-    --  ✔ enabled, ❌ disabled
-    local status = '❌'
+    --  👌 enabled, 😔 disabled
+    local status = '😔'
     nsum = nsum+1
     nact = 0
     -- Check if is enabled
     for k2, v2 in pairs(_config.enabled_plugins) do
       if v == v2..'.lua' then 
-        status = '✔' 
+        status = '👌' 
       end
       nact = nact+1
     end
-    if not only_enabled or status == '✔' then
+    if not only_enabled or status == '👌' then
       -- get the name
       v = string.match (v, "(.*)%.lua")
-      text = text..nsum..'.'..status..' '..v..' \n'
+      text = text..nsum..'. '..v..'  '..status..'\n'
     end
   end
-  local text = text..'\n\n'..nsum..' plugins installed\n\n'..nact..' plugins enabled\n\n'..nsum-nact..' plugins disabled'..tmp
+  local text = text..'\nThere are '..nsum..' plugins installed.\n'..nact..' plugins enabled and '..nsum-nact..' disabled'
   return text
 end
 
@@ -51,24 +50,24 @@ local function list_plugins(only_enabled)
   local text = ''
   local nsum = 0
   for k, v in pairs( plugins_names( )) do
-    --  ✔ enabled, ❌ disabled
-    local status = '❌'
+    --  فعال enabled, 😔 disabled
+    local status = '😔'
     nsum = nsum+1
     nact = 0
     -- Check if is enabled
     for k2, v2 in pairs(_config.enabled_plugins) do
       if v == v2..'.lua' then 
-        status = '✔' 
+        status = '👌' 
       end
       nact = nact+1
     end
-    if not only_enabled or status == '✔' then
+    if not only_enabled or status == 'فعاله' then
       -- get the name
       v = string.match (v, "(.*)%.lua")
-     -- text = text..v..'  '..status..'\n'
+      text = text..v..'  '..status..'\n'
     end
   end
-  local text = text..'\nPlugins Reloaded !\n\n'..nact..' plugins enabled\n'..nsum..' plugins installed\n\n@telemanager_ch'
+  local text = text..'\n'..nact..' plugins enabled from '..nsum..' plugins installed.'
   return text
 end
 
@@ -83,7 +82,7 @@ local function enable_plugin( plugin_name )
   print('checking if '..plugin_name..' exists')
   -- Check if plugin is enabled
   if plugin_enabled(plugin_name) then
-    return ''..plugin_name..' is enabled'
+    return 'Plugin '..plugin_name..' is enabled'
   end
   -- Checks if plugin exists
   if plugin_exists(plugin_name) then
@@ -94,19 +93,19 @@ local function enable_plugin( plugin_name )
     -- Reload the plugins
     return reload_plugins( )
   else
-    return ''..plugin_name..' does not exists'
+    return 'Plugin '..plugin_name..' does not exists'
   end
 end
 
 local function disable_plugin( name, chat )
   -- Check if plugins exists
   if not plugin_exists(name) then
-    return ' '..name..' does not exists'
+    return 'Plugin '..name..' does not exists'
   end
   local k = plugin_enabled(name)
   -- Check if plugin is enabled
   if not k then
-    return ' '..name..' not enabled'
+    return 'Plugin '..name..' not enabled'
   end
   -- Disable and reload
   table.remove(_config.enabled_plugins, k)
@@ -130,7 +129,7 @@ local function disable_plugin_on_chat(receiver, plugin)
   _config.disabled_plugin_on_chat[receiver][plugin] = true
 
   save_config()
-  return ' '..plugin..' disabled on this chat'
+  return 'Plugin '..plugin..' disabled on this chat'
 end
 
 local function reenable_plugin_on_chat(receiver, plugin)
@@ -148,7 +147,7 @@ local function reenable_plugin_on_chat(receiver, plugin)
 
   _config.disabled_plugin_on_chat[receiver][plugin] = false
   save_config()
-  return ' '..plugin..' is enabled again'
+  return 'Plugin '..plugin..' is enabled again'
 end
 
 local function run(msg, matches)
@@ -158,34 +157,30 @@ local function run(msg, matches)
   end
 
   -- Re-enable a plugin for this chat
-  if matches[1] == '+' and matches[3] == 'chat' then
-      if is_momod(msg) then
+  if matches[1] == 'enable' and matches[3] == 'chat' then
     local receiver = get_receiver(msg)
     local plugin = matches[2]
     print("enable "..plugin..' on this chat')
     return reenable_plugin_on_chat(receiver, plugin)
   end
-    end
 
   -- Enable a plugin
-  if matches[1] == '+' and is_sudo(msg) then --after changed to moderator mode, set only sudo
-      if is_momod(msg) then
+  if matches[1] == 'enable' and is_sudo(msg) then --after changed to moderator mode, set only sudo
     local plugin_name = matches[2]
     print("enable: "..matches[2])
     return enable_plugin(plugin_name)
   end
-    end
+
   -- Disable a plugin on a chat
-  if matches[1] == '-' and matches[3] == 'chat' then
-      if is_momod(msg) then
+  if matches[1] == 'disable' and matches[3] == 'chat' then
     local plugin = matches[2]
     local receiver = get_receiver(msg)
     print("disable "..plugin..' on this chat')
     return disable_plugin_on_chat(receiver, plugin)
   end
-    end
+
   -- Disable a plugin
-  if matches[1] == '-' and is_sudo(msg) then --after changed to moderator mode, set only sudo
+  if matches[1] == 'disable' and is_sudo(msg) then --after changed to moderator mode, set only sudo
     if matches[2] == 'plugins' then
     	return 'This plugin can\'t be disabled'
     end
@@ -194,9 +189,6 @@ local function run(msg, matches)
   end
 
   -- Reload all the plugins!
-  if matches[1] == '*' and is_sudo(msg) then --after changed to moderator mode, set only sudo
-    return reload_plugins(true)
-  end
   if matches[1] == 'reload' and is_sudo(msg) then --after changed to moderator mode, set only sudo
     return reload_plugins(true)
   end
@@ -211,57 +203,20 @@ return {
           },
       sudo = {
           "!plugins : list all plugins.",
-          "!plugins + [plugin] : enable plugin.",
-          "!plugins - [plugin] : disable plugin.",
-          "!plugins * : reloads all plugins." },
+          "!plugins enable [plugin] : enable plugin.",
+          "!plugins disable [plugin] : disable plugin.",
+          "!plugins reload : reloads all plugins." },
           },
   patterns = {
     "^!plugins$",
-    "^!plugins? (+) ([%w_%.%-]+)$",
-    "^!plugins? (-) ([%w_%.%-]+)$",
-    "^!plugins? (+) ([%w_%.%-]+) (chat)",
-    "^!plugins? (-) ([%w_%.%-]+) (chat)",
-    "^!plugins? (*)$",
-    "^[!/](reload)$"
-    },
+    "^!plugins? (enable) ([%w_%.%-]+)$",
+    "^!plugins? (disable) ([%w_%.%-]+)$",
+    "^!plugins? (enable) ([%w_%.%-]+) (chat)",
+    "^!plugins? (disable) ([%w_%.%-]+) (chat)",
+    "^!plugins? (reload)$" },
   run = run,
   moderated = true, -- set to moderator mode
   --privileged = true
 }
 
 end
-
-
-
-
---  -_-_-_-_-_-_-_-_-_-   ||-_-_-_-_-_   ||             ||-_-_-_-_-_
---           ||           ||             ||             ||
---           ||           ||             ||             ||
---           ||           ||             ||             ||
---           ||           ||-_-_-_-_-_   ||             ||-_-_-_-_-_
---           ||           ||             ||             ||
---           ||           ||             ||             ||
---           ||           ||             ||             ||
---           ||           ||-_-_-_-_-_   ||-_-_-_-_-_   ||-_-_-_-_-_
---
---
---                               /\                              /\             /-_-_-_-_-_    ||-_-_-_-_-_   ||-_-_-_-_-_
---  ||\\            //||        //\\        ||      //||        //\\           //              ||             ||         //
---  || \\          // ||       //  \\       ||     // ||       //  \\         //               ||             ||       //
---  ||  \\        //  ||      //    \\      ||    //  ||      //    \\       ||                ||             ||    //
---  ||   \\      //   ||     //______\\     ||   //   ||     //______\\      ||      -_-_-_-   ||-_-_-_-_-_   || //
---  ||    \\    //    ||    //        \\    ||  //    ||    //        \\     ||           ||   ||             ||  \\ 
---  ||     \\  //     ||   //          \\   || //     ||   //          \\     \\          ||   ||             ||     \\
---  ||      \\//      ||  //            \\  ||//      ||  //            \\     \\-_-_-_-_-||   ||-_-_-_-_-_   ||        \\
---
---
---  ||-_-_-_-    ||           ||           ||               //-_-_-_-_-_-
---  ||     ||    ||           ||           ||              //
---  ||_-_-_||    ||           ||           ||             //
---  ||           ||           ||           ||             \\
---  ||           ||           \\           //              \\
---  ||           ||            \\         //               //
---  ||           ||-_-_-_-_     \\-_-_-_-//    -_-_-_-_-_-//
---
---By @ali_ghoghnoos
---@telemanager_ch
